@@ -1,0 +1,36 @@
+name: ACD-004 AQA 8463 binary transfer
+
+on:
+  push:
+    paths:
+      - '.github/workflows/acd-004-aqa-8463-transfer.yml'
+
+permissions:
+  contents: read
+
+env:
+  SOURCE_URL: https://cdn.sanity.io/files/p28bar15/green/6b5358e1159b1b6cc2d622fc5eb894320d6fb763.pdf
+  EXPECTED_SHA256: 6dc72473321259e59530a30c84c8b3c4100f9f58c856fbc11be51b5a5ce573ae
+  OUTPUT_FILE: AQA-8463-FS-INS-2025.pdf
+
+jobs:
+  acquire-and-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download official AQA binary
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 5 --retry-all-errors \
+            --output "$OUTPUT_FILE" "$SOURCE_URL"
+          test "$(stat -c%s "$OUTPUT_FILE")" = "740921"
+          echo "$EXPECTED_SHA256  $OUTPUT_FILE" | sha256sum --check --strict
+          file "$OUTPUT_FILE" | grep -qi 'PDF document'
+      - name: Upload validated binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: aqa-8463-official-binary
+          path: AQA-8463-FS-INS-2025.pdf
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0
