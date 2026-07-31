@@ -9,46 +9,77 @@ jobs:
   acquire:
     runs-on: ubuntu-latest
     steps:
-      - name: Download 2022 January and June ordinary IAL Mathematics QP/MS
+      - name: Download 2019 current-spec ordinary IAL Mathematics QP/MS
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p payload
-          : > payload/download_manifest.tsv
-          units=("WDM11:1" "WMA11:1" "WMA12:2" "WMA13:3" "WMA14:4" "WME01:1" "WME02:2" "WST01:1" "WST02:2")
-          sessions=("Jan:January:01" "Jun:June:06")
-          download_one() {
-            local name="$1" url="$2"
-            if curl -fL --retry 3 --retry-all-errors --connect-timeout 30 --max-time 180 "$url" -o "payload/$name"; then
-              test "$(head -c 5 "payload/$name")" = '%PDF-'
-              local bytes sha
-              bytes=$(stat -c%s "payload/$name")
-              sha=$(sha256sum "payload/$name" | awk '{print $1}')
-              printf '%s\tPASS\t%s\t%s\t%s\n' "$name" "$bytes" "$sha" "$url" >> payload/download_manifest.tsv
-            else
-              rm -f "payload/$name"
-              printf '%s\tFAIL\t0\t-\t%s\n' "$name" "$url" >> payload/download_manifest.tsv
-            fi
+          python3 - <<'PY'
+          import hashlib, html, re, sys, urllib.parse, urllib.request
+          from pathlib import Path
+
+          OUT = Path('payload')
+          ordinary = {'WDM11','WMA11','WMA12','WMA13','WMA14','WME01','WME02','WST01','WST02'}
+          sessions = [
+              ('2019-01', '2019%20Jan%20%282018%20syllabus%29', 'January'),
+              ('2019-06', '2019%20Jun', 'June'),
+          ]
+          roots = {
+              'QP': 'Question-paper',
+              'MS': 'Mark-scheme',
           }
-          for session in "${sessions[@]}"; do
-            IFS=: read -r folder month mm <<< "$session"
-            for item in "${units[@]}"; do
-              IFS=: read -r code unit <<< "$item"
-              qp_src="Questionpaper-Unit${unit}(${code})-${month}2022.pdf"
-              ms_src="Markscheme-Unit${unit}(${code})-${month}2022.pdf"
-              qp_enc=$(python3 -c 'import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1]))' "$qp_src")
-              ms_enc=$(python3 -c 'import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1]))' "$ms_src")
-              base="https://papers.xtremepape.rs/Edexcel/Advanced%20Level/Mathematics/2022%20${folder}"
-              download_one "2022-${mm}_${code}-01_QP.pdf" "$base/Question-paper/$qp_enc"
-              download_one "2022-${mm}_${code}-01_MS.pdf" "$base/Mark-scheme/$ms_enc"
-            done
-          done
-          cat payload/download_manifest.tsv
-          test "$(find payload -maxdepth 1 -name '*.pdf' | wc -l)" -gt 0
+          manifest = []
+
+          def fetch(url: str) -> bytes:
+              req = urllib.request.Request(url, headers={'User-Agent':'Mozilla/5.0'})
+              with urllib.request.urlopen(req, timeout=90) as r:
+                  return r.read()
+
+          for prefix, folder, month in sessions:
+              for role, subdir in roots.items():
+                  index_url = f'https://papers.xtremepape.rs/Edexcel/Advanced%20Level/Mathematics/{folder}/{subdir}/'
+                  try:
+                      page = fetch(index_url).decode('utf-8', 'replace')
+                  except Exception as exc:
+                      manifest.append((prefix, role, 'INDEX_FAIL', 0, '-', index_url, repr(exc)))
+                      continue
+                  hrefs = [html.unescape(x) for x in re.findall(r'href=["\']([^"\']+\.pdf)["\']', page, flags=re.I)]
+                  seen = set()
+                  for href in hrefs:
+                      decoded = urllib.parse.unquote(href)
+                      upper = decoded.upper()
+                      code = next((c for c in sorted(ordinary) if c in upper), None)
+                      if not code:
+                          continue
+                      key = (prefix, code, role)
+                      if key in seen:
+                          manifest.append((prefix, role, f'{code}_DUPLICATE_LISTING', 0, '-', urllib.parse.urljoin(index_url, href), decoded))
+                          continue
+                      seen.add(key)
+                      url = urllib.parse.urljoin(index_url, href)
+                      name = f'{prefix}_{code}-01_{role}.pdf'
+                      try:
+                          data = fetch(url)
+                          if not data.startswith(b'%PDF-'):
+                              raise ValueError('not PDF header')
+                          (OUT / name).write_bytes(data)
+                          manifest.append((name, 'PASS', len(data), hashlib.sha256(data).hexdigest(), url, decoded, ''))
+                      except Exception as exc:
+                          manifest.append((name, 'FAIL', 0, '-', url, decoded, repr(exc)))
+
+          with (OUT / 'download_manifest.tsv').open('w', encoding='utf-8') as f:
+              for row in manifest:
+                  f.write('\t'.join(map(str, row)) + '\n')
+          print((OUT / 'download_manifest.tsv').read_text())
+          count = len(list(OUT.glob('*.pdf')))
+          print('PDF_COUNT', count)
+          if count == 0:
+              raise SystemExit('No PDFs acquired')
+          PY
       - name: Upload transfer artifact
         uses: actions/upload-artifact@v4
         with:
-          name: acd038-transfer-2022
+          name: acd038-transfer-2019-current
           path: payload/
           retention-days: 1
           if-no-files-found: error
