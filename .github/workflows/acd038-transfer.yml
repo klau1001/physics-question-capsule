@@ -1,0 +1,79 @@
+name: ACD-038 temporary source transfer
+on:
+  push:
+    paths:
+      - '.github/workflows/acd038-transfer.yml'
+  workflow_dispatch:
+
+jobs:
+  acquire:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download exact source PDFs
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p payload
+          cat > /tmp/sources.tsv <<'EOF'
+          2025-06_WST02-01_QP.pdf	https://f7b64cf3-fcb1-457c-9e9f-f5e3f43cd8a3.usrfiles.com/ugd/f7b64c_d6b86793b06d478fa3cfaf35452f66d5.pdf
+          2025-06_WST02-01_MS.pdf	https://f7b64cf3-fcb1-457c-9e9f-f5e3f43cd8a3.usrfiles.com/ugd/f7b64c_834758b3159640adbcc94986301a5e8f.pdf
+          2021-10_WDM11-01_MS.pdf	https://cdn.savemyexams.com/uploads/2022/10/oct-2021-decision-1-ial-maths-edexcel-ms.pdf
+          2022-01_WDM11-01_QP.pdf	https://papers.xtremepape.rs/Edexcel/Advanced%20Level/Mathematics/2022%20Jan/Question-paper/Questionpaper-Unit1%28WDM11%29-January2022.pdf
+          2022-01_WDM11-01_MS.pdf	https://papers.xtremepape.rs/Edexcel/Advanced%20Level/Mathematics/2022%20Jan/Mark-scheme/Markscheme-Unit1%28WDM11%29-January2022.pdf
+          2022-01_WMA11-01_QP.pdf	https://papers.xtremepape.rs/Edexcel/Advanced%20Level/Mathematics/2022%20Jan/Question-paper/Questionpaper-Unit1%28WMA11%29-January2022.pdf
+          2022-01_WMA11-01_MS.pdf	https://papers.xtremepape.rs/Edexcel/Advanced%20Level/Mathematics/2022%20Jan/Mark-scheme/Markscheme-Unit1%28WMA11%29-January2022.pdf
+          2022-01_WMA12-01_QP.pdf	https://papers.xtremepape.rs/Edexcel/Advanced%20Level/Mathematics/2022%20Jan/Question-paper/Questionpaper-Unit2%28WMA12%29-January2022.pdf
+          2022-01_WMA12-01_MS.pdf	https://papers.xtremepape.rs/Edexcel/Advanced%20Level/Mathematics/2022%20Jan/Mark-scheme/Markscheme-Unit2%28WMA12%29-January2022.pdf
+          2022-01_WMA13-01_QP.pdf	https://papers.xtremepape.rs/Edexcel/Advanced%20Level/Mathematics/2022%20Jan/Question-paper/Questionpaper-Unit3%28WMA13%29-January2022.pdf
+          2022-01_WMA13-01_MS.pdf	https://papers.xtremepape.rs/Edexcel/Advanced%20Level/Mathematics/2022%20Jan/Mark-scheme/Markscheme-Unit3%28WMA13%29-January2022.pdf
+          2022-01_WMA14-01_QP.pdf	https://papers.xtremepape.rs/Edexcel/Advanced%20Level/Mathematics/2022%20Jan/Question-paper/Questionpaper-Unit4%28WMA14%29-January2022.pdf
+          2022-01_WMA14-01_MS.pdf	https://papers.xtremepape.rs/Edexcel/Advanced%20Level/Mathematics/2022%20Jan/Mark-scheme/Markscheme-Unit4%28WMA14%29-January2022.pdf
+          2022-01_WME01-01_QP.pdf	https://papers.xtremepape.rs/Edexcel/Advanced%20Level/Mathematics/2022%20Jan/Question-paper/Questionpaper-Unit1%28WME01%29-January2022.pdf
+          2022-01_WME01-01_MS.pdf	https://papers.xtremepape.rs/Edexcel/Advanced%20Level/Mathematics/2022%20Jan/Mark-scheme/Markscheme-Unit1%28WME01%29-January2022.pdf
+          2022-01_WME02-01_QP.pdf	https://papers.xtremepape.rs/Edexcel/Advanced%20Level/Mathematics/2022%20Jan/Question-paper/Questionpaper-Unit2%28WME02%29-January2022.pdf
+          2022-01_WME02-01_MS.pdf	https://papers.xtremepape.rs/Edexcel/Advanced%20Level/Mathematics/2022%20Jan/Mark-scheme/Markscheme-Unit2%28WME02%29-January2022.pdf
+          2022-01_WST01-01_QP.pdf	https://papers.xtremepape.rs/Edexcel/Advanced%20Level/Mathematics/2022%20Jan/Question-paper/Questionpaper-Unit1%28WST01%29-January2022.pdf
+          2022-01_WST01-01_MS.pdf	https://papers.xtremepape.rs/Edexcel/Advanced%20Level/Mathematics/2022%20Jan/Mark-scheme/Markscheme-Unit1%28WST01%29-January2022.pdf
+          2022-01_WST02-01_QP.pdf	https://papers.xtremepape.rs/Edexcel/Advanced%20Level/Mathematics/2022%20Jan/Question-paper/Questionpaper-Unit2%28WST02%29-January2022.pdf
+          2022-01_WST02-01_MS.pdf	https://papers.xtremepape.rs/Edexcel/Advanced%20Level/Mathematics/2022%20Jan/Mark-scheme/Markscheme-Unit2%28WST02%29-January2022.pdf
+          2022-06_WDM11-01_QP.pdf	https://papers.xtremepape.rs/Edexcel/Advanced%20Level/Mathematics/2022%20Jun/Question-paper/Questionpaper-Unit1%28WDM11%29-June2022.pdf
+          2022-06_WDM11-01_MS.pdf	https://papers.xtremepape.rs/Edexcel/Advanced%20Level/Mathematics/2022%20Jun/Mark-scheme/Markscheme-Unit1%28WDM11%29-June2022.pdf
+          2022-06_WMA11-01_QP.pdf	https://papers.xtremepape.rs/Edexcel/Advanced%20Level/Mathematics/2022%20Jun/Question-paper/Questionpaper-Unit1%28WMA11%29-June2022.pdf
+          2022-06_WMA11-01_MS.pdf	https://papers.xtremepape.rs/Edexcel/Advanced%20Level/Mathematics/2022%20Jun/Mark-scheme/Markscheme-Unit1%28WMA11%29-June2022.pdf
+          2022-06_WMA12-01_QP.pdf	https://papers.xtremepape.rs/Edexcel/Advanced%20Level/Mathematics/2022%20Jun/Question-paper/Questionpaper-Unit2%28WMA12%29-June2022.pdf
+          2022-06_WMA12-01_MS.pdf	https://papers.xtremepape.rs/Edexcel/Advanced%20Level/Mathematics/2022%20Jun/Mark-scheme/Markscheme-Unit2%28WMA12%29-June2022.pdf
+          2022-06_WMA13-01_QP.pdf	https://papers.xtremepape.rs/Edexcel/Advanced%20Level/Mathematics/2022%20Jun/Question-paper/Questionpaper-Unit3%28WMA13%29-June2022.pdf
+          2022-06_WMA13-01_MS.pdf	https://papers.xtremepape.rs/Edexcel/Advanced%20Level/Mathematics/2022%20Jun/Mark-scheme/Markscheme-Unit3%28WMA13%29-June2022.pdf
+          2022-06_WMA14-01_QP.pdf	https://papers.xtremepape.rs/Edexcel/Advanced%20Level/Mathematics/2022%20Jun/Question-paper/Questionpaper-Unit4%28WMA14%29-June2022.pdf
+          2022-06_WMA14-01_MS.pdf	https://papers.xtremepape.rs/Edexcel/Advanced%20Level/Mathematics/2022%20Jun/Mark-scheme/Markscheme-Unit4%28WMA14%29-June2022.pdf
+          2022-06_WME01-01_QP.pdf	https://papers.xtremepape.rs/Edexcel/Advanced%20Level/Mathematics/2022%20Jun/Question-paper/Questionpaper-Unit1%28WME01%29-June2022.pdf
+          2022-06_WME01-01_MS.pdf	https://papers.xtremepape.rs/Edexcel/Advanced%20Level/Mathematics/2022%20Jun/Mark-scheme/Markscheme-Unit1%28WME01%29-June2022.pdf
+          2022-06_WME02-01_QP.pdf	https://papers.xtremepape.rs/Edexcel/Advanced%20Level/Mathematics/2022%20Jun/Question-paper/Questionpaper-Unit2%28WME02%29-June2022.pdf
+          2022-06_WME02-01_MS.pdf	https://papers.xtremepape.rs/Edexcel/Advanced%20Level/Mathematics/2022%20Jun/Mark-scheme/Markscheme-Unit2%28WME02%29-June2022.pdf
+          2022-06_WST01-01_QP.pdf	https://papers.xtremepape.rs/Edexcel/Advanced%20Level/Mathematics/2022%20Jun/Question-paper/Questionpaper-Unit1%28WST01%29-June2022.pdf
+          2022-06_WST01-01_MS.pdf	https://papers.xtremepape.rs/Edexcel/Advanced%20Level/Mathematics/2022%20Jun/Mark-scheme/Markscheme-Unit1%28WST01%29-June2022.pdf
+          2022-06_WST02-01_QP.pdf	https://papers.xtremepape.rs/Edexcel/Advanced%20Level/Mathematics/2022%20Jun/Question-paper/Questionpaper-Unit2%28WST02%29-June2022.pdf
+          2022-06_WST02-01_MS.pdf	https://papers.xtremepape.rs/Edexcel/Advanced%20Level/Mathematics/2022%20Jun/Mark-scheme/Markscheme-Unit2%28WST02%29-June2022.pdf
+          EOF
+          : > payload/download_manifest.tsv
+          while IFS=$'\t' read -r name url; do
+            echo "Downloading $name"
+            if curl -fL --retry 3 --retry-all-errors --connect-timeout 30 --max-time 180 "$url" -o "payload/$name"; then
+              test "$(head -c 5 "payload/$name")" = '%PDF-'
+              bytes=$(stat -c%s "payload/$name")
+              sha=$(sha256sum "payload/$name" | awk '{print $1}')
+              printf '%s\tPASS\t%s\t%s\t%s\n' "$name" "$bytes" "$sha" "$url" >> payload/download_manifest.tsv
+            else
+              rm -f "payload/$name"
+              printf '%s\tFAIL\t0\t-\t%s\n' "$name" "$url" >> payload/download_manifest.tsv
+            fi
+          done < /tmp/sources.tsv
+          cat payload/download_manifest.tsv
+          test "$(find payload -maxdepth 1 -name '*.pdf' | wc -l)" -gt 0
+      - name: Upload transfer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: acd038-transfer
+          path: payload/
+          retention-days: 1
+          if-no-files-found: error
