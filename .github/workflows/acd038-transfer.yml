@@ -15,14 +15,14 @@ jobs:
           set -euo pipefail
           mkdir -p payload
           cat > /tmp/sources.tsv <<'EOF'
-          2019-01_WMA11-01_QP.pdf	https://qualifications.pearson.com/content/dam/pdf/International%20Advanced%20Level/Mathematics/2018/Exam-materials/WMA11_01_que_20190109.pdf
-          2019-01_WMA11-01_MS.pdf	https://qualifications.pearson.com/content/dam/pdf/International%20Advanced%20Level/Mathematics/2018/Exam-materials/WMA11_01_msc_20190307.pdf
-          2019-06_WDM11-01_QP.pdf	https://papers.xtremepape.rs/Edexcel/Advanced%20Level/Mathematics/2019%20Jun/Question-paper/Questionpaper-Unit1%28WDM11%29-June2019.pdf
-          2019-06_WDM11-01_MS.pdf	https://papers.xtremepape.rs/Edexcel/Advanced%20Level/Mathematics/2019%20Jun/Mark-scheme/Markscheme-Unit1%28WDM11%29-June2019.pdf
-          2019-06_WMA11-01_QP.pdf	https://papers.xtremepape.rs/Edexcel/Advanced%20Level/Mathematics/2019%20Jun/Question-paper/Questionpaper-Unit1%28WMA11%29-June2019.pdf
-          2019-06_WMA11-01_MS.pdf	https://papers.xtremepape.rs/Edexcel/Advanced%20Level/Mathematics/2019%20Jun/Mark-scheme/Markscheme-Unit1%28WMA11%29-June2019.pdf
-          2019-06_WMA12-01_QP.pdf	https://papers.xtremepape.rs/Edexcel/Advanced%20Level/Mathematics/2019%20Jun/Question-paper/Questionpaper-Unit2%28WMA12%29-June2019.pdf
-          2019-06_WMA12-01_MS.pdf	https://papers.xtremepape.rs/Edexcel/Advanced%20Level/Mathematics/2019%20Jun/Mark-scheme/Markscheme-Unit2%28WMA12%29-June2019.pdf
+          2019-01_WMA11-01_QP.pdf	https://pmt.physicsandmathstutor.com/download/Maths/A-level/Papers/Edexcel-IAL/Pure/P1/QP/January%202019%20QP.pdf
+          2019-01_WMA11-01_MS.pdf	https://pmt.physicsandmathstutor.com/download/Maths/A-level/Papers/Edexcel-IAL/Pure/P1/MS/January%202019%20MS.pdf
+          2019-06_WDM11-01_QP.pdf	https://pmt.physicsandmathstutor.com/download/Maths/A-level/Papers/Edexcel-IAL/Decision/D1/QP/June%202019%20QP.pdf
+          2019-06_WDM11-01_MS.pdf	https://pmt.physicsandmathstutor.com/download/Maths/A-level/Papers/Edexcel-IAL/Decision/D1/MS/June%202019%20MS.pdf
+          2019-06_WMA11-01_QP.pdf	https://pmt.physicsandmathstutor.com/download/Maths/A-level/Papers/Edexcel-IAL/Pure/P1/QP/June%202019%20QP.pdf
+          2019-06_WMA11-01_MS.pdf	https://pmt.physicsandmathstutor.com/download/Maths/A-level/Papers/Edexcel-IAL/Pure/P1/MS/June%202019%20MS.pdf
+          2019-06_WMA12-01_QP.pdf	https://pmt.physicsandmathstutor.com/download/Maths/A-level/Papers/Edexcel-IAL/Pure/P2/QP/June%202019%20QP.pdf
+          2019-06_WMA12-01_MS.pdf	https://pmt.physicsandmathstutor.com/download/Maths/A-level/Papers/Edexcel-IAL/Pure/P2/MS/June%202019%20MS.pdf
           EOF
           : > payload/download_manifest.tsv
           while IFS=$'\t' read -r name url; do
@@ -38,7 +38,7 @@ jobs:
       - name: Upload transfer artifact
         uses: actions/upload-artifact@v4
         with:
-          name: acd038-transfer-2019-current-focused
+          name: acd038-transfer-2019-current-pmt
           path: payload/
           retention-days: 1
           if-no-files-found: error
