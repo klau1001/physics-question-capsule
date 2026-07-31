@@ -3,6 +3,9 @@ on:
   push:
     paths:
       - '.github/workflows/acd038-transfer.yml'
+  pull_request:
+    paths:
+      - '.github/workflows/acd038-transfer.yml'
   workflow_dispatch:
 
 jobs:
