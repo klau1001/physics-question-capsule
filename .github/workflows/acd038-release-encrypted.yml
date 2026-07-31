@@ -1,0 +1,27 @@
+name: ACD038 publish encrypted bridge release
+
+on:
+  push:
+    paths:
+      - '.github/workflows/acd038-release-encrypted.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Publish deterministic temporary encrypted release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release delete acd038-bridge-temp --cleanup-tag --yes || true
+          gh release create acd038-bridge-temp \
+            acd038-bridge/2025-01_WST02-01_QP.pdf.p7m \
+            acd038-bridge/2025-01_WST02-01_MS.pdf.p7m \
+            --title 'ACD-038 temporary encrypted bridge' \
+            --notes 'Ephemeral encrypted transfer assets. No clear exam-paper bytes are published.'
