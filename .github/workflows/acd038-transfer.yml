@@ -9,81 +9,36 @@ jobs:
   acquire:
     runs-on: ubuntu-latest
     steps:
-      - name: Probe and download 2019 current-spec IAL Mathematics QP/MS
+      - name: Download verified 2019 current-spec IAL Mathematics sources
         shell: bash
         run: |
-          set -uo pipefail
+          set -euo pipefail
           mkdir -p payload
+          cat > /tmp/sources.tsv <<'EOF'
+          2019-01_WMA11-01_QP.pdf	https://qualifications.pearson.com/content/dam/pdf/International%20Advanced%20Level/Mathematics/2018/Exam-materials/WMA11_01_que_20190109.pdf
+          2019-01_WMA11-01_MS.pdf	https://qualifications.pearson.com/content/dam/pdf/International%20Advanced%20Level/Mathematics/2018/Exam-materials/WMA11_01_msc_20190307.pdf
+          2019-06_WDM11-01_QP.pdf	https://papers.xtremepape.rs/Edexcel/Advanced%20Level/Mathematics/2019%20Jun/Question-paper/Questionpaper-Unit1%28WDM11%29-June2019.pdf
+          2019-06_WDM11-01_MS.pdf	https://papers.xtremepape.rs/Edexcel/Advanced%20Level/Mathematics/2019%20Jun/Mark-scheme/Markscheme-Unit1%28WDM11%29-June2019.pdf
+          2019-06_WMA11-01_QP.pdf	https://papers.xtremepape.rs/Edexcel/Advanced%20Level/Mathematics/2019%20Jun/Question-paper/Questionpaper-Unit1%28WMA11%29-June2019.pdf
+          2019-06_WMA11-01_MS.pdf	https://papers.xtremepape.rs/Edexcel/Advanced%20Level/Mathematics/2019%20Jun/Mark-scheme/Markscheme-Unit1%28WMA11%29-June2019.pdf
+          2019-06_WMA12-01_QP.pdf	https://papers.xtremepape.rs/Edexcel/Advanced%20Level/Mathematics/2019%20Jun/Question-paper/Questionpaper-Unit2%28WMA12%29-June2019.pdf
+          2019-06_WMA12-01_MS.pdf	https://papers.xtremepape.rs/Edexcel/Advanced%20Level/Mathematics/2019%20Jun/Mark-scheme/Markscheme-Unit2%28WMA12%29-June2019.pdf
+          EOF
           : > payload/download_manifest.tsv
-          units=("WDM11:1" "WMA11:1" "WMA12:2" "WMA13:3" "WMA14:4" "WME01:1" "WME02:2" "WST01:1" "WST02:2")
-
-          try_one() {
-            local dest="$1" url="$2"
-            local tmp="payload/.tmp-${RANDOM}-${RANDOM}.pdf"
-            if curl -fL -A 'Mozilla/5.0' -e 'https://papers.xtremepape.rs/' --retry 2 --retry-all-errors --connect-timeout 20 --max-time 120 "$url" -o "$tmp" 2>/dev/null; then
-              if [ "$(head -c 5 "$tmp" 2>/dev/null || true)" = '%PDF-' ]; then
-                mv "$tmp" "payload/$dest"
-                local bytes sha
-                bytes=$(stat -c%s "payload/$dest")
-                sha=$(sha256sum "payload/$dest" | awk '{print $1}')
-                printf '%s\tPASS\t%s\t%s\t%s\n' "$dest" "$bytes" "$sha" "$url" >> payload/download_manifest.tsv
-                return 0
-              fi
-            fi
-            rm -f "$tmp"
-            return 1
-          }
-
-          acquire() {
-            local prefix="$1" folder="$2" month="$3" code="$4" unit="$5" role="$6"
-            local sub stem dest filename enc url
-            if [ "$role" = QP ]; then
-              sub='Question-paper'
-              stem='Questionpaper'
-            else
-              sub='Mark-scheme'
-              stem='Markscheme'
-            fi
-            dest="${prefix}_${code}-01_${role}.pdf"
-            local candidates=(
-              "${stem}-Unit${unit}(${code})-${month}2019.pdf"
-              "${stem}-Unit${unit}%20(${code})-${month}2019.pdf"
-              "${stem}-Unit${unit}(${code})-${month}%202019.pdf"
-              "${stem}-Unit${unit}(${code})-${month}-2019.pdf"
-            )
-            for filename in "${candidates[@]}"; do
-              enc=$(python3 -c 'import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1], safe="%"))' "$filename")
-              url="https://papers.xtremepape.rs/Edexcel/Advanced%20Level/Mathematics/${folder}/${sub}/${enc}"
-              if try_one "$dest" "$url"; then
-                return 0
-              fi
-            done
-            printf '%s\tFAIL\t0\t-\tNO_MATCH\n' "$dest" >> payload/download_manifest.tsv
-            return 1
-          }
-
-          # January 2019: probe all ordinary current-spec units.
-          for item in "${units[@]}"; do
-            IFS=: read -r code unit <<< "$item"
-            acquire '2019-01' '2019%20Jan%20%282018%20syllabus%29' 'January' "$code" "$unit" QP || true
-            acquire '2019-01' '2019%20Jan%20%282018%20syllabus%29' 'January' "$code" "$unit" MS || true
-          done
-
-          # June 2019: first current-spec summer series had WDM11, WMA11 and WMA12.
-          for item in 'WDM11:1' 'WMA11:1' 'WMA12:2'; do
-            IFS=: read -r code unit <<< "$item"
-            acquire '2019-06' '2019%20Jun' 'June' "$code" "$unit" QP || true
-            acquire '2019-06' '2019%20Jun' 'June' "$code" "$unit" MS || true
-          done
-
+          while IFS=$'\t' read -r name url; do
+            echo "Downloading $name"
+            curl -fL -A 'Mozilla/5.0' --retry 3 --retry-all-errors --connect-timeout 20 --max-time 180 "$url" -o "payload/$name"
+            test "$(head -c 5 "payload/$name")" = '%PDF-'
+            bytes=$(stat -c%s "payload/$name")
+            sha=$(sha256sum "payload/$name" | awk '{print $1}')
+            printf '%s\tPASS\t%s\t%s\t%s\n' "$name" "$bytes" "$sha" "$url" >> payload/download_manifest.tsv
+          done < /tmp/sources.tsv
           cat payload/download_manifest.tsv
-          count=$(find payload -maxdepth 1 -name '*.pdf' | wc -l)
-          echo "PDF_COUNT $count"
-          test "$count" -gt 0
+          test "$(find payload -maxdepth 1 -name '*.pdf' | wc -l)" -eq 8
       - name: Upload transfer artifact
         uses: actions/upload-artifact@v4
         with:
-          name: acd038-transfer-2019-current
+          name: acd038-transfer-2019-current-focused
           path: payload/
           retention-days: 1
           if-no-files-found: error
