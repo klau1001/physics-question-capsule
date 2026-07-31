@@ -1,0 +1,58 @@
+name: ACD038 encrypted source bridge
+
+on:
+  push:
+    paths:
+      - '.github/workflows/acd038-encrypted-bridge.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  fetch-encrypt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch and encrypt exact source PDFs
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p acd038-bridge
+          cat > /tmp/acd038-cert.pem <<'CERT'
+          -----BEGIN CERTIFICATE-----
+          MIIDJTCCAg2gAwIBAgIUFSxhDNMihtxbjsl9Gqt/sBrLB+AwDQYJKoZIhvcNAQEL
+          BQAwIjEgMB4GA1UEAwwXQUNEMDM4IEVwaGVtZXJhbCBCcmlkZ2UwHhcNMjYwNzMx
+          MTYyMDU3WhcNMjYwODAxMTYyMDU3WjAiMSAwHgYDVQQDDBdBQ0QwMzggRXBoZW1l
+          cmFsIEJyaWRnZTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBANV3YmaW
+          Alus0KgC2K5Ww0nbKcORJ4wlbxBQDdzYtiN9Ykvi4BGegO9+DmUtm/+P8/FX6Lag
+          9esbXAohOgZG1SCB0kQWW8ivpgSD+4b4zJCt7srm066pX12owq3rA+52kU7zK2p8
+          qLfi8Mv17Rus8OkF+DYqYIt8b8rQQK+xEbI3zb5sV0CcMypxnUuAJ0rg0Pv1UE0O
+          LLRI2Q3bCKzfQTIovFYDJSCNuRvaRXs+Og1rjbmWt2di6cZEv+a8gAlc5nmTCbWI
+          dVKVnNcagIMNqt/qUeGHOmdAtjIszbTATEYGxd2EWikSdkiHTt68TkxJbtkUloMn
+          hXGJK1Q5XkuG4z8CAwEAAaNTMFEwHQYDVR0OBBYEFHdMmSBQff5ihjP50eot8yjZ
+          aDWKMB8GA1UdIwQYMBaAFHdMmSBQff5ihjP50eot8yjZaDWKMA8GA1UdEwEB/wQF
+          MAMBAf8wDQYJKoZIhvcNAQELBQADggEBAK4wz3m1Amk3xuEKkA4TUHhJxgBftLu8
+          TXFWUnXwR/YfOunS27Kr3dvWii7y8faSgwMBuPPi9iLeL/fWL8putcKFvj0billa
+          rO5e3Qdw+B7YYCrInYxCIz9TgfXRCJWt16uHPLv4D9SuDlpR40sWQMmgyHHcbt8T
+          eGzv9Y6eyKdFYsA9RlDPRxT3zCYMHuAt/0nc1DyimSuLevSaxLE2Cg4FY2SilWZg
+          Jqfsd0aqIR6Rc8H6D7VRDW5hDaP8Nm2Ol7UjTB3h609MaKFXcWDEJQV9rwNHENo2
+          xY/9Zkj4n97xo2AwJCeZEf2uA97eieRkHeZeIJ/KHW292d2gQ3GDKCw=
+          -----END CERTIFICATE-----
+          CERT
+          curl --fail --location --retry 3 --output /tmp/2025-01_WST02-01_QP.pdf 'https://www.mymathscloud.com/api/download/modules/A-Level/Past-Papers/Edexcel-IAL/S2/S2%20JANUARY%202025%20PAPER.pdf?id=boXXm3zUTJGbmv2wyB_qoQ'
+          curl --fail --location --retry 3 --output /tmp/2025-01_WST02-01_MS.pdf 'https://www.mymathscloud.com/api/download/modules/A-Level/Past-Papers/Edexcel-IAL/S2/S2%20JANUARY%202025%20MS.pdf?id=ehOOe7NVSfC5rOFgaK8ZEQ'
+          test "$(head -c 5 /tmp/2025-01_WST02-01_QP.pdf)" = '%PDF-'
+          test "$(head -c 5 /tmp/2025-01_WST02-01_MS.pdf)" = '%PDF-'
+          sha256sum /tmp/2025-01_WST02-01_*.pdf | sed 's#/tmp/##' > acd038-bridge/SHA256SUMS.txt
+          openssl cms -encrypt -binary -aes-256-cbc -in /tmp/2025-01_WST02-01_QP.pdf -outform DER -out acd038-bridge/2025-01_WST02-01_QP.pdf.p7m /tmp/acd038-cert.pem
+          openssl cms -encrypt -binary -aes-256-cbc -in /tmp/2025-01_WST02-01_MS.pdf -outform DER -out acd038-bridge/2025-01_WST02-01_MS.pdf.p7m /tmp/acd038-cert.pem
+          rm -f /tmp/2025-01_WST02-01_*.pdf /tmp/acd038-cert.pem
+      - name: Commit encrypted bridge payload
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'acd038-bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add acd038-bridge
+          git commit -m 'ACD-038 encrypted bridge payload: 2025 January S2' || exit 0
+          git push
