@@ -1,0 +1,17 @@
+name: ACD038 prime encrypted CDN bridge
+
+on:
+  push:
+    paths:
+      - '.github/workflows/acd038-prime-jsdelivr.yml'
+
+jobs:
+  prime:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Prime immutable encrypted payload URLs
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 5 --output /dev/null 'https://cdn.jsdelivr.net/gh/klau1001/physics-question-capsule@034ea749008d7063d421060326daef2558e621a1/acd038-bridge/2025-01_WST02-01_QP.pdf.p7m'
+          curl --fail --location --retry 5 --output /dev/null 'https://cdn.jsdelivr.net/gh/klau1001/physics-question-capsule@034ea749008d7063d421060326daef2558e621a1/acd038-bridge/2025-01_WST02-01_MS.pdf.p7m'
